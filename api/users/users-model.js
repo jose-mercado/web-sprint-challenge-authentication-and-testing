@@ -28,7 +28,10 @@ function findBy(filter) {
     return db("users").where(filter).orderBy("id");
 }
 
-
+function validatePassword(password){
+    return db('users')
+        .where('password', password)
+}
 
 module.exports = {
     add,
@@ -36,4 +39,5 @@ module.exports = {
     findByUserName,
     findByUserId,
     findBy, 
+    validatePassword
 }

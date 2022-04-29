@@ -1,6 +1,16 @@
 // Write your tests here
-const request = require('supertest')
-const server = require('./server')
+const server = require("./server.js")
+const db = require("../data/dbConfig.js")
+const supertest = require("supertest")
+
+beforeEach(async () => {
+  await db.migrate.rollback()
+  await db.migrate.latest()
+})
+
+afterAll(async () => {
+  await db.destroy()
+})
 
 test('sanity', () => {
   expect(true).toBe(true)
@@ -10,36 +20,55 @@ test('is the correct environment', () => {
   expect(process.env.NODE_ENV).toBe('testing')
 })
 
-describe('[POST] /register', () => {
-  test('responds with error when no username', async () => {
-    const res = await request(server).post('/api/auth/register').send({
-      username: '',
-      password: 'foobar'
-    })
-    expect(res.body).toMatchObject({message: 'username and password required'})
-  })
-  test('responds with error when no password', async () => {
-    const res = await request(server).post('/api/auth/register').send({
-      username: 'buzz',
-      password: ''
-    })
-    expect(res.body).toMatchObject({message: 'username and password required'})
-  })
-})
+describe("user tests", () => {
 
-describe('[POST] /login', () => {
-  test('responds with error when no username', async () => {
-    const res = await request(server).post('/login').send({
-      username: '',
-      password: 'foobar'
-    })
-    expect(res.status).toBe(404)
+
+  it("registers a new user", async () => {
+    const res = await supertest(server).post("/api/auth/register").send({ username: 'testUser', password: 'testPassword' })
+    expect(res.statusCode).toBe(201)
+    expect(res.body.id).toBe(1)
+    expect(res.body.username).toBe("testUser")
   })
-  test('responds with error when no password', async () => {
-    const res = await request(server).post('/api/auth/login').send({
-      username: 'buzz',
-      password: '',
-    })
-    expect(res.body).toMatchObject({message: 'username and password required'})
+
+
+  it("checks that the username is unique before registering", async () => {
+    const res = await supertest(server).post("/api/auth/register").send({ username: 'uniqueUsername', password: 'testPassword' })
+    expect(res.statusCode).toBe(201)
+    expect(res.body.id).toBe(1)
+    expect(res.body.username).toBe("uniqueUsername")
+
+    const res2 = await supertest(server).post("/api/auth/register").send({ username: 'uniqueUsername', password: 'testPassword' })
+    expect(res2.statusCode).toBe(400)
+    expect(res2.body.message).toBe("Username is already taken. Please use another username.")
+  })
+
+
+  it("checks that the user already exists before logging in", 
+  
+  async () => {
+    const res = await supertest(server).post("/api/auth/register").send({ username: 'testUser', password: 'testPassword' })
+    expect(res.statusCode).toBe(201)
+    expect(res.body.id).toBe(1)
+    expect(res.body.username).toBe('testUser')
+
+    const res3 = await supertest(server).post("/api/auth/login").send({ username: 'userNotInDB', password: 'testPassword' })
+    expect(res3.statusCode).toBe(401)
+    expect(res3.body.message).toBe('invalid credentials')
+
+  })
+
+
+  it("checks that an existing user is successfully logged in", 
+  
+  async () => {
+    const res = await supertest(server).post("/api/auth/register").send({ username: 'testUser', password: 'testPassword' })
+    expect(res.statusCode).toBe(201)
+    expect(res.body.id).toBe(1)
+    expect(res.body.username).toBe('testUser')
+
+    const res4 = await supertest(server).post("/api/auth/login").send({ username: 'testUser', password: 'testPassword' })
+    expect(res4.statusCode).toBe(200)
+    expect(res4.body.message).toBe("welcome, testUser")
+
   })
 })
