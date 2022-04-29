@@ -46,11 +46,9 @@ router.post('/register', checkPayload, checkUserInDB, async (req, res) => {
         const rounds = process.env.BCRYPT_ROUNDS || 8
         const hash = bcrypt.hashSync(req.body.password, rounds)
         const newUser = await Users.add({id: req.body.id, username: req.body.username, password: hash})
-      
         res.status(201).json(newUser)
         } catch(e) {
           res.status(500).json({message: e.message})
-          
         }
       });
 

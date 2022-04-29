@@ -35,7 +35,7 @@ const checkUsernameExists = async ( req, res, next) => {
             })
         }
         }catch(e){
-            res.status(500).json({message:'Server broke'})
+            res.status(500).json({message:'error'})
         }
 }
 
